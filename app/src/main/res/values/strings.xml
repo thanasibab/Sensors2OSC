@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="app_name" translatable="false">Sensors2OSC</string>
+    <string name="app_name" translatable="false">Custom Sensors2OSC</string>
     <string name="action_settings">Settings</string>
     <string name="host">Host</string>
     <string name="communication">Communication</string>

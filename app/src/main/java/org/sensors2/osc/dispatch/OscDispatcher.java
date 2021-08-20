@@ -75,6 +75,16 @@ public class OscDispatcher implements DataDispatcher {
         }
     }
 
+    // Testing send functionality for simple message
+    public void trySend(String function) {
+        Message message = new Message();
+        Bundle data = new Bundle();
+        data.putString("oscParameter", function);
+        message.setData(data);
+        OscHandler handler = communication.getOscHandler();
+        handler.sendMessage(message);
+    }
+
     private void trySend(SensorConfiguration sensorConfiguration, float[] values) {
         if (!sensorConfiguration.sendingNeeded(values)) {
             return;
@@ -86,6 +96,7 @@ public class OscDispatcher implements DataDispatcher {
         message.setData(data);
         OscHandler handler = communication.getOscHandler();
         handler.sendMessage(message);
+        System.out.println(message.getData());
     }
 
     private void trySend(SensorConfiguration sensorConfiguration, String value) {

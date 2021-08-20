@@ -54,8 +54,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
 
-public class StartUpActivity extends FragmentActivity implements SensorActivity, NfcActivity, CompoundButton.OnCheckedChangeListener, View.OnTouchListener {
-
+public class SensorsActivity extends FragmentActivity implements SensorActivity, NfcActivity, CompoundButton.OnCheckedChangeListener, View.OnTouchListener {
     private Settings settings;
     private SensorCommunication sensorCommunication;
     private OscDispatcher dispatcher;
@@ -358,20 +357,20 @@ public class StartUpActivity extends FragmentActivity implements SensorActivity,
         }
     }
 
-    @Override
-    @SuppressLint("NewApi")
-    protected void onPause() {
-        super.onPause();
-        this.sensorCommunication.onPause();
-        if (this.wakeLock.isHeld()) {
-            this.wakeLock.release();
-        }
+    // @Override
+    // @SuppressLint("NewApi")
+    // protected void onPause() {
+    //     super.onPause();
+    //     this.sensorCommunication.onPause();
+    //     if (this.wakeLock.isHeld()) {
+    //         this.wakeLock.release();
+    //     }
 
-        if (nfcAdapter != null) {
-            nfcAdapter.disableForegroundDispatch(this);
-            nfcAdapter.disableForegroundNdefPush(this);
-        }
-    }
+    //     if (nfcAdapter != null) {
+    //         nfcAdapter.disableForegroundDispatch(this);
+    //         nfcAdapter.disableForegroundNdefPush(this);
+    //     }
+    // }
 
     public void addSensorFragment(SensorFragment sensorFragment) {
         this.dispatcher.addSensorConfiguration(sensorFragment.getSensorConfiguration());
