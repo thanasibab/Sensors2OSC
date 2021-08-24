@@ -1,11 +1,25 @@
 package org.sensors2.osc.activities;
 
+import android.Manifest;
 import android.app.Activity;
+import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.pm.PackageManager;
 import android.graphics.PorterDuff;
+import android.hardware.Sensor;
+import android.hardware.SensorEvent;
+import android.hardware.SensorEventListener;
+import android.hardware.SensorManager;
+import android.hardware.TriggerEvent;
+import android.hardware.TriggerEventListener;
+import android.location.Location;
+import android.location.LocationListener;
+import android.location.LocationManager;
+import android.os.Build;
 import android.os.Bundle;
 import android.preference.PreferenceManager;
+import android.support.v4.app.ActivityCompat;
 import android.view.Menu;
 import android.view.MenuItem;
 import android.view.View;
@@ -24,12 +38,17 @@ import org.sensors2.osc.sensors.Settings;
 
 import java.util.Date;
 
-public class RecordingActivity extends Activity {
+public class RecordingActivity extends Activity implements SensorEventListener {
 
+    final private int REQUEST_CODE_ASK_PERMISSIONS = 123;
     private OscDispatcher dispatcher;
     private OSCPortIn receiver;
     private Settings settings;
     private boolean connectedToDevice = false;
+    LocationManager locationManager;
+    LocationListener locationListener;
+    private SensorManager sensorManager;
+    private float longitude, latitude;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -38,10 +57,41 @@ public class RecordingActivity extends Activity {
 
         this.dispatcher = new OscDispatcher();
         this.settings = this.loadSettings();
-
         this.initOscPortIn();
-
         changeRecButtonColor(0xFF00FF00);
+
+        sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
+
+        sensorManager.registerListener(this,
+                sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER),
+                SensorManager.SENSOR_DELAY_NORMAL);
+        sensorManager.registerListener(this,
+                sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION),
+                SensorManager.SENSOR_DELAY_NORMAL);
+
+        this.locationManager = (LocationManager) getSystemService(Context.LOCATION_SERVICE);
+        this.locationListener = new MyLocationListener();
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.ACCESS_FINE_LOCATION)
+                != PackageManager.PERMISSION_GRANTED && ActivityCompat.checkSelfPermission(this,
+                Manifest.permission.ACCESS_COARSE_LOCATION) != PackageManager.PERMISSION_GRANTED) {
+            if(Build.VERSION.SDK_INT >= 23) {
+                requestPermissions(new String[]{
+                                android.Manifest.permission.ACCESS_FINE_LOCATION},
+                                REQUEST_CODE_ASK_PERMISSIONS);
+            }
+            else {
+                return;
+            }
+        }
+        try {
+            latitude = (float)locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER).getLatitude();
+            longitude = (float)locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER).getLongitude();
+            locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
+        }
+        catch (Exception e){
+            System.out.println("Could not get last known location.");
+        }
     }
 
     @Override
@@ -145,14 +195,61 @@ public class RecordingActivity extends Activity {
                     @Override
                     public void acceptMessage(Date date, OSCMessage oscMessage) {
                         changeRecViewText("Connected. Press to start...");
+                        dispatcher.trySend("latitude", latitude);
+                        dispatcher.trySend("longitude", longitude);
                         changeRecButtonColor(0xFF0000FF);
                         connectedToDevice = true;
+                    }
+                });
+                receiver.addListener("/connectDevice", new OSCListener() {
+                    @Override
+                    public void acceptMessage(Date date, OSCMessage oscMessage) {
+                        changeRecViewText("Please connect camera...");
+                        changeRecButtonColor(0xFF0000FF);
+                    }
+                });
+                receiver.addListener("/disconnected", new OSCListener() {
+                    @Override
+                    public void acceptMessage(Date date, OSCMessage oscMessage) {
+                        changeRecViewText("Waiting for connection...");
+                        changeRecButtonColor(0xFF00FF00);
                     }
                 });
                 receiver.startListening();
             } catch (Exception e) {
                 e.printStackTrace();
             }
+        }
+    }
+
+    /*---------- Listener class to get coordinates ------------- */
+    private class MyLocationListener implements LocationListener {
+        @Override
+        public void onLocationChanged(Location loc) {
+            dispatcher.trySend("longitude", (float)loc.getLongitude());
+            dispatcher.trySend("latitude", (float)loc.getLatitude());
+        }
+
+        @Override
+        public void onProviderDisabled(String provider) {}
+
+        @Override
+        public void onProviderEnabled(String provider) {}
+
+        @Override
+        public void onStatusChanged(String provider, int status, Bundle extras) {}
+    }
+
+    @Override
+    public void onAccuracyChanged(Sensor arg0, int arg1) { }
+
+    @Override
+    public void onSensorChanged(SensorEvent event) {
+        if (event.sensor.getType()==Sensor.TYPE_ACCELEROMETER){
+            dispatcher.trySend("accelerometer", event.values);
+        }
+        else if (event.sensor.getType()==Sensor.TYPE_LINEAR_ACCELERATION){
+            dispatcher.trySend("linearacceleration", event.values);
         }
     }
 }
