@@ -57,9 +57,17 @@ public class RecordingActivity extends Activity implements SensorEventListener {
 
         this.dispatcher = new OscDispatcher();
         this.settings = this.loadSettings();
-        this.initOscPortIn();
-        changeRecButtonColor(0xFF00FF00);
 
+        if(savedInstanceState == null){
+            changeRecButtonColor(0xFF00FF00);
+        }
+        else{
+            connectedToDevice = savedInstanceState.getBoolean("ConnDevice");
+            if(connectedToDevice){
+                changeRecViewText(savedInstanceState.getString("RecText"));
+            }
+        }
+        this.initOscPortIn();
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
 
         sensorManager.registerListener(this,
@@ -84,10 +92,10 @@ public class RecordingActivity extends Activity implements SensorEventListener {
             }
         }
         try {
+            locationManager.requestLocationUpdates(
+                    LocationManager.GPS_PROVIDER, 2000, 2, locationListener);
             latitude = (float)locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER).getLatitude();
             longitude = (float)locationManager.getLastKnownLocation(LocationManager.GPS_PROVIDER).getLongitude();
-            locationManager.requestLocationUpdates(
-                    LocationManager.GPS_PROVIDER, 5000, 10, locationListener);
         }
         catch (Exception e){
             System.out.println("Could not get last known location.");
@@ -117,11 +125,6 @@ public class RecordingActivity extends Activity implements SensorEventListener {
             }
             case R.id.action_about: {
                 Intent intent = new Intent(this, AboutActivity.class);
-                startActivity(intent);
-                return true;
-            }
-            case R.id.action_sensors: {
-                Intent intent = new Intent(this, SensorsActivity.class);
                 startActivity(intent);
                 return true;
             }
@@ -251,5 +254,14 @@ public class RecordingActivity extends Activity implements SensorEventListener {
         else if (event.sensor.getType()==Sensor.TYPE_LINEAR_ACCELERATION){
             dispatcher.trySend("linearacceleration", event.values);
         }
+    }
+    @Override
+    public void onSaveInstanceState(Bundle savedInstanceState) {
+        super.onSaveInstanceState(savedInstanceState);
+        this.receiver.stopListening();
+        this.receiver.close();
+        TextView rec_text = (TextView) findViewById(R.id.rec_text);
+        savedInstanceState.putString("RecText", rec_text.getText().toString());
+        savedInstanceState.putBoolean("ConnDevice", connectedToDevice);
     }
 }

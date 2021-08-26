@@ -16,9 +16,4 @@
         android:orderInCategory="200"
         android:showAsAction="never"
         android:title="@string/action_about" />
-    <item
-        android:id="@+id/action_sensors"
-        android:orderInCategory="250"
-        android:showAsAction="never"
-        android:title="@string/sensors" />
 </menu>
